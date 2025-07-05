@@ -697,7 +697,7 @@ class Game {
         this.updateAndDrawParticles();
     }
 
-   drawMenu() {
+    drawMenu() {
     background(247, 250, 252);
     fill(26, 32, 44);
     textSize(50);
@@ -739,50 +739,49 @@ class Game {
     text("Use UP/DOWN or 1/2 to select, ENTER to confirm", WIDTH / 2, 400);
     text("Press Q to exit", WIDTH / 2, 430);
 }
-    drawSideSelection() {
-        background(247, 250, 252);
-        fill(26, 32, 44);
-        textSize(50);
-        textStyle(BOLD);
-        textAlign(CENTER);
-        text("Choose Your Side", WIDTH / 2, 80);
-        textSize(22);
-        textStyle(NORMAL);
-        text("Hunt as Tigers or Defend as Goats", WIDTH / 2, 120);
-        let sides = ["Tigers", "Goats", "Random"];
-        for (let i = 0; i < sides.length; i++) {
-            fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
-            textSize(30);
-            textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
-            text(sides[i], WIDTH / 2, 220 + i * 60);
-        }
-        textSize(18);
-        fill(113, 128, 150);
-        text("Use UP/DOWN or 1/2/3 to select, ENTER to confirm", WIDTH / 2, 400);
+  drawSideSelection() {
+    background(247, 250, 252);
+    fill(26, 32, 44);
+    textSize(50);
+    textStyle(BOLD);
+    textAlign(CENTER);
+    text("Choose Your Side", WIDTH / 2, 80);
+    textSize(22);
+    textStyle(NORMAL);
+    text("Hunt as Tigers or Defend as Goats", WIDTH / 2, 120);
+    let sides = ["Tigers", "Goats", "Random"];
+    for (let i = 0; i < sides.length; i++) {
+        fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
+        textSize(30);
+        textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
+        text(sides[i], WIDTH / 2, 220 + i * 60);
     }
+    textSize(18);
+    fill(113, 128, 150);
+    text("Use UP/DOWN or 1/2/3 to select, ENTER to confirm", WIDTH / 2, 400);
+}
 
-    drawDifficultySelection() {
-        background(247, 250, 252);
-        fill(26, 32, 44);
-        textSize(50);
-        textStyle(BOLD);
-        textAlign(CENTER);
-        text("AI Difficulty", WIDTH / 2, 80);
-        textSize(22);
-        textStyle(NORMAL);
-        text("Challenge Your Strategic Skills", WIDTH / 2, 120);
-        let difficulties = ["Easy", "Medium", "Hard"];
-        for (let i = 0; i < difficulties.length; i++) {
-            fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
-            textSize(30);
-            textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
-            text(difficulties[i], WIDTH / 2, 220 + i * 60);
-        }
-        textSize(18);
-        fill(113, 128, 150);
-        text("Use UP/DOWN or 1/2/3 to select, ENTER to confirm", WIDTH / 2, 400);
+drawDifficultySelection() {
+    background(247, 250, 252);
+    fill(26, 32, 44);
+    textSize(50);
+    textStyle(BOLD);
+    textAlign(CENTER);
+    text("AI Difficulty", WIDTH / 2, 80);
+    textSize(22);
+    textStyle(NORMAL);
+    text("Challenge Your Strategic Skills", WIDTH / 2, 120);
+    let difficulties = ["Easy", "Medium", "Hard"];
+    for (let i = 0; i < difficulties.length; i++) {
+        fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
+        textSize(30);
+        textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
+        text(difficulties[i], WIDTH / 2, 220 + i * 60);
     }
-
+    textSize(18);
+    fill(113, 128, 150);
+    text("Use UP/DOWN or 1/2/3 to select, ENTER to confirm", WIDTH / 2, 400);
+}
     drawNameInput() {
         background(247, 250, 252);
         textAlign(CENTER);
@@ -1393,6 +1392,73 @@ function draw() {
 function mousePressed() {
     if (game.state === PLAYING) {
         game.handleClick(mouseX, mouseY);
+    } else if (game.state === MENU) {
+        let modes = ["Play vs AI", "Local Multiplayer"];
+        for (let i = 0; i < modes.length; i++) {
+            let textWidthValue = textWidth(modes[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                if (i === 0) {
+                    game.gameMode = SINGLE_PLAYER;
+                    game.state = SIDE_SELECTION;
+                    game.selectedMenuItem = 0;
+                } else if (i === 1) {
+                    game.gameMode = LOCAL_MULTIPLAYER;
+                    game.state = NAME_INPUT;
+                    game.inputFor = "player1";
+                    game.inputActive = true;
+                }
+            }
+        }
+    } else if (game.state === SIDE_SELECTION) {
+        let sides = ["Tigers", "Goats", "Random"];
+        for (let i = 0; i < sides.length; i++) {
+            let textWidthValue = textWidth(sides[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                if (i === 0) {
+                    game.playerSide = 'tiger';
+                    game.aiSide = 'goat';
+                    game.state = DIFFICULTY_SELECTION;
+                    game.selectedMenuItem = 0;
+                } else if (i === 1) {
+                    game.playerSide = 'goat';
+                    game.aiSide = 'tiger';
+                    game.state = DIFFICULTY_SELECTION;
+                    game.selectedMenuMinim = 0;
+                } else if (i === 2) {
+                    let sides = ['tiger', 'goat'];
+                    game.playerSide = random(sides);
+                    game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
+                    game.state = DIFFICULTY_SELECTION;
+                    game.selectedMenuItem = 0;
+                }
+            }
+        }
+    } else if (game.state === DIFFICULTY_SELECTION) {
+        let difficulties = ["Easy", "Medium", "Hard"];
+        for (let i = 0; i < difficulties.length; i++) {
+            let textWidthValue = textWidth(difficulties[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                game.aiDifficulty = i;
+                game.state = PLAYING;
+                game.turnStartTime = null;
+                game.turnTimeLeft = TURN_TIMEOUT;
+            }
+        }
     }
 }
 
