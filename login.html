@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baag Chal - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <ul>
+            <li><a href="/login.html" class="active">Login/Signup</a></li>
+            <li><a href="/rules.html">Rules</a></li>
+            <li><a href="/index.html">Play Game</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <h1 class="game-title">Baag Chal</h1>
+        <p class="game-subtitle">Master the Hunt or Defend the Herd</p>
+        <div id="auth-form" class="input-container">
+            <h2 id="form-title">Login</h2>
+            <label class="input-label" for="username">Username</label>
+            <input type="text" id="username" class="input-field" placeholder="Enter username" required aria-label="Username input">
+            <label class="input-label" for="password">Password</label>
+            <input type="password" id="password" class="input-field" placeholder="Enter password" required aria-label="Password input">
+            <label class="input-label" for="email" id="email-label" style="display: none;">Email</label>
+            <input type="email" id="email" class="input-field" placeholder="Enter email" style="display: none;" aria-label="Email input">
+            <div>
+                <button id="submit-button" class="button">Login</button>
+                <button id="guest-button" class="button">Play as Guest</button>
+            </div>
+            <span id="toggle-form" class="toggle-link">Don't have an account? Sign up</span>
+        </div>
+    </div>
+    <script>
+        const formTitle = document.getElementById('form-title');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const emailInput = document.getElementById('email');
+        const emailLabel = document.getElementById('email-label');
+        const submitButton = document.getElementById('submit-button');
+        const guestButton = document.getElementById('guest-button');
+        const toggleFormLink = document.getElementById('toggle-form');
+        let isLogin = true;
+
+        function showMessage(text, duration = 3000) {
+            const existingMessage = document.querySelector('.message-box');
+            if (existingMessage) existingMessage.remove();
+            const messageBox = document.createElement('div');
+            messageBox.className = 'message-box';
+            messageBox.textContent = text;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                if (messageBox && messageBox.parentNode) {
+                    messageBox.parentNode.removeChild(messageBox);
+                }
+            }, duration);
+        }
+
+        toggleFormLink.addEventListener('click', () => {
+            isLogin = !isLogin;
+            formTitle.textContent = isLogin ? 'Login' : 'Sign Up';
+            submitButton.textContent = isLogin ? 'Login' : 'Sign Up';
+            toggleFormLink.textContent = isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login';
+            emailLabel.style.display = isLogin ? 'none' : 'block';
+            emailInput.style.display = isLogin ? 'none' : 'block';
+            guestButton.style.display = isLogin ? 'block' : 'none';
+        });
+
+        submitButton.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            const email = emailInput.value.trim();
+
+            if (!username || !password || (!isLogin && !email)) {
+                showMessage('Please fill in all required fields');
+                return;
+            }
+
+            if (!isLogin) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showMessage('Please enter a valid email address');
+                    return;
+                }
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = isLogin ? 'Logging in...' : 'Signing up...';
+
+            const url = isLogin ? '/api/login' : '/api/register';
+            const data = isLogin ? { username, password } : { username, email, password };
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message);
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('isGuest', 'false');
+                    setTimeout(() => {
+                        window.location.href = '/index.html';
+                    }, 1000);
+                } else {
+                    showMessage(result.error || 'An error occurred');
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showMessage('Request timed out, please try again');
+                } else {
+                    showMessage('Network error, please try again');
+                }
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = isLogin ? 'Login' : 'Sign Up';
+            }
+        });
+
+        guestButton.addEventListener('click', () => {
+            showMessage('Entering game as guest');
+            localStorage.setItem('username', 'Guest');
+            localStorage.setItem('isGuest', 'true');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
