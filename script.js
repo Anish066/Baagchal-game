@@ -1384,6 +1384,89 @@ drawInvitePlay() {
     textSize(18);
     fill(113, 128, 150);
     text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
+
+    Game.prototype.drawInvitePlay = function() {
+    background(247, 250, 252);
+    fill(26, 32, 44);
+    textSize(50);
+    textStyle(BOLD);
+    textAlign(CENTER);
+    text("Invite Play", WIDTH / 2, 80);
+    textSize(22);
+    textStyle(NORMAL);
+    text("Play with a friend online", WIDTH / 2, 120);
+    if (this.invitePlayState === CREATE_ROOM || this.invitePlayState === JOIN_ROOM) {
+        let options = ["Create Room", "Join Room"];
+        for (let i = 0; i < options.length; i++) {
+            fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
+            textSize(30);
+            textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
+            text(options[i], WIDTH / 2, 220 + i * 60);
+        }
+        if (this.invitePlayState === JOIN_ROOM) {
+            textSize(20);
+            fill(26, 32, 44);
+            text("Tap to enter Room Code", WIDTH / 2, 300);
+            const boxWidth = 200, boxHeight = 40;
+            stroke(26, 32, 44);
+            strokeWeight(2);
+            noFill();
+            rect(WIDTH / 2 - boxWidth / 2, 320, boxWidth, boxHeight, 8);
+            fill(26, 32, 44);
+            noStroke();
+            textSize(24);
+            let displayCode = this.currentInput || "";
+            // Show cursor only for non-mobile devices
+            if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                if (this.inputActive && frameCount % 60 < 30) {
+                    displayCode += "|";
+                }
+            }
+            text(displayCode.toUpperCase(), WIDTH / 2, 330);
+        }
+        textSize(18);
+        fill(113, 128, 150);
+        text("Use UP/DOWN or 1/2 to select, ENTER to confirm", WIDTH / 2, 400);
+    } else if (this.invitePlayState === WAITING) {
+        textSize(30);
+        textStyle(NORMAL);
+        text("Room Code: " + (this.roomCode || "Generating..."), WIDTH / 2, 220);
+        if (this.roomCode) {
+            let link = `${window.location.origin}?room=${this.roomCode}`;
+            textSize(18);
+            text("Share this link:", WIDTH / 2, 260);
+            textSize(16);
+            text(link, WIDTH / 2, 290);
+            fill(this.copyButtonHover ? CORAL : [26, 32, 44]);
+            textSize(20);
+            text("Copy Link", WIDTH / 2, 330);
+            let textWidthValue = textWidth("Copy Link");
+            let textHeight = 20;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 330 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && mouseY >= y && mouseY <= y + textHeight) {
+                this.copyButtonHover = true;
+                if (mouseIsPressed) {
+                    navigator.clipboard.writeText(link).then(() => {
+                        this.setMessage("Link copied!", 60);
+                    });
+                }
+            } else {
+                this.copyButtonHover = false;
+            }
+        }
+        textSize(22);
+        fill(26, 32, 44);
+        text("Waiting for opponent...", WIDTH / 2, 380);
+    } else if (this.invitePlayState === PLAYING_ONLINE) {
+        this.drawBoard();
+        textSize(22);
+        text("Playing Online", WIDTH / 2, HEIGHT - 50);
+    }
+    textSize(18);
+    fill(113, 128, 150);
+    text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
+};
 }
 initSocket() {
     this.socket = io('http://localhost:3000');
@@ -1611,7 +1694,46 @@ drawDifficultySelection() {
         textSize(18);
         fill(113, 128, 150);
         text("Press ENTER to confirm, BACKSPACE to delete", WIDTH / 2, HEIGHT / 2 + 70);
+
+        Game.prototype.drawNameInput = function() {
+    background(247, 250, 252);
+    textAlign(CENTER);
+    fill(26, 32, 44);
+    textSize(34);
+    textStyle(BOLD);
+    let labelText = `Enter ${this.inputFor === 'player1' ? 'Player 1' : 'Player 2'} Name`;
+    text(labelText, WIDTH / 2, HEIGHT / 2 - 80);
+    textSize(20);
+    textStyle(NORMAL);
+    text("Tap to enter name (max 20 characters)", WIDTH / 2, HEIGHT / 2 - 40);
+    const boxWidth = 360;
+    const boxHeight = 50;
+    stroke(26, 32, 44);
+    strokeWeight(2);
+    noFill();
+    rect(WIDTH / 2 - boxWidth / 2, HEIGHT / 2 - 10, boxWidth, boxHeight, 8);
+    fill(26, 32, 44);
+    noStroke();
+    textSize(26);
+    let inputText = this.currentInput.substring(0, 20);
+    let textWidthValue = textWidth(inputText);
+    if (textWidthValue > boxWidth - 20) {
+        let maxLength = floor((boxWidth - 20) / textWidth('a'));
+        inputText = this.currentInput.substring(0, maxLength - 3) + '...';
     }
+    // Show cursor only for non-mobile devices
+    if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        if (this.inputActive && frameCount % 60 < 30) {
+            inputText += "|";
+        }
+    }
+    text(inputText, WIDTH / 2, HEIGHT / 2 + 8);
+    textSize(18);
+    fill(113, 128, 150);
+    text("Press ENTER to confirm, BACKSPACE to delete", WIDTH / 2, HEIGHT / 2 + 70);
+};
+    }
+
 
     drawGameOver() {
         this.drawBoard();
@@ -2123,7 +2245,7 @@ checkWinConditions() {
 }
 
 let game;
-let inputField1, inputField2, inviteLinkInput;
+
 
 function preload() {
     tigerImage = loadImage('tiger.png');
@@ -2158,38 +2280,7 @@ function setup() {
             }
         });
     }
-    // Create input fields for local multiplayer player names
-  inputField1 = createInput('Player 1');
-  inputField1.position(200, 300);
-  inputField1.size(200, 30);
-  inputField1.hide();
-  
-  inputField2 = createInput('Player 2');
-  inputField2.position(200, 350);
-  inputField2.size(200, 30);
-  inputField2.hide();
-  
-  // Create input field for online multiplayer invite link
-  inviteLinkInput = createInput('');
-  inviteLinkInput.position(200, 400);
-  inviteLinkInput.size(200, 30);
-  inviteLinkInput.hide();
-  
-  // Enable touch events for mobile compatibility
-  inputField1.elt.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    inputField1.elt.focus();
-  });
-  inputField2.elt.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    inputField2.elt.focus();
-  });
-  inviteLinkInput.elt.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    inviteLinkInput.elt.focus();
-  });
 }
-
 
 // Global functions
 function draw() {
@@ -2283,7 +2374,6 @@ function draw() {
         const moveHistoryPanel = document.getElementById('move-history-panel');
         if (moveHistoryPanel) moveHistoryPanel.style.display = 'none';
     }
-    game.draw();
 }
 
 // Global input handling functions
@@ -2580,9 +2670,6 @@ function mousePressed() {
                     game.currentInput = "";
                 }
             }
-            if (!isMouseOverInput()) {
-    game.handleMousePress(mouseX, mouseY);
-  }
         }
     }
 }
@@ -2678,14 +2765,137 @@ function touchStarted() {
             });
         }
         input.focus();
+    } else if (game.state === PLAYING && game.gameMode === ONLINE_MULTIPLAYER && game.currentTurn !== game.playerSide) {
+        return;
+    } else if (game.state === PLAYING) {
+        game.handleClick(mouseX, mouseY);
+    } else if (game.state === MENU) {
+        let modes = ["Play vs AI", "Local Multiplayer", "Invite Play"];
+        for (let i = 0; i < modes.length; i++) {
+            let textWidthValue = textWidth(modes[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                if (i === 0) {
+                    game.gameMode = SINGLE_PLAYER;
+                    game.state = SIDE_SELECTION;
+                    game.selectedMenuItem = 0;
+                } else if (i === 1) {
+                    game.gameMode = LOCAL_MULTIPLAYER;
+                    game.state = NAME_INPUT;
+                    game.inputFor = "player1";
+                    game.inputActive = true;
+                } else if (i === 2) {
+                    game.gameMode = ONLINE_MULTIPLAYER;
+                    game.state = INVITE_PLAY;
+                    game.invitePlayState = CREATE_ROOM;
+                    game.selectedMenuItem = 0;
+                    game.initSocket();
+                }
+            }
+        }
+    } else if (game.state === SIDE_SELECTION) {
+        let sides = ["Tigers", "Goats", "Random"];
+        for (let i = 0; i < sides.length; i++) {
+            let textWidthValue = textWidth(sides[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                if (i === 0) {
+                    game.playerSide = 'tiger';
+                    game.aiSide = 'goat';
+                } else if (i === 1) {
+                    game.playerSide = 'goat';
+                    game.aiSide = 'tiger';
+                } else if (i === 2) {
+                    let sides = ['tiger', 'goat'];
+                    game.playerSide = random(sides);
+                    game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
+                }
+                game.state = THEME_SELECTION;
+                game.selectedMenuItem = 0;
+            }
+        }
+    } else if (game.state === THEME_SELECTION) {
+        let totalWidth = THEMES.length * (THEME_PREVIEW_WIDTH + THEME_PREVIEW_GAP) - THEME_PREVIEW_GAP;
+        let startX = (WIDTH - totalWidth) / 2;
+        if (mouseX >= 50 && mouseX <= 50 + THEME_BUTTON_SIZE &&
+            mouseY >= HEIGHT / 2 - THEME_BUTTON_SIZE / 2 &&
+            mouseY <= HEIGHT / 2 + THEME_BUTTON_SIZE / 2 &&
+            game.selectedMenuItem > 0) {
+            game.selectedMenuItem--;
+        } else if (mouseX >= WIDTH - 50 - THEME_BUTTON_SIZE && mouseX <= WIDTH - 50 &&
+                   mouseY >= HEIGHT / 2 - THEME_BUTTON_SIZE / 2 &&
+                   mouseY <= HEIGHT / 2 + THEME_BUTTON_SIZE / 2 &&
+                   game.selectedMenuItem < THEMES.length - 1) {
+            game.selectedMenuItem++;
+        } else {
+            let currentX = startX;
+            for (let i = 0; i < THEMES.length; i++) {
+                if (mouseX >= currentX && mouseX <= currentX + THEME_PREVIEW_WIDTH &&
+                    mouseY >= HEIGHT / 2 - THEME_PREVIEW_HEIGHT / 2 &&
+                    mouseY <= HEIGHT / 2 + THEME_PREVIEW_HEIGHT / 2) {
+                    game.selectedMenuItem = i;
+                    game.selectedTheme = i;
+                    if (game.gameMode === SINGLE_PLAYER) {
+                        game.state = DIFFICULTY_SELECTION;
+                    } else {
+                        game.state = PLAYING;
+                        game.turnStartTime = null;
+                        game.turnTimeLeft = TURN_TIMEOUT;
+                    }
+                    game.selectedMenuItem = 0;
+                }
+                currentX += THEME_PREVIEW_WIDTH + THEME_PREVIEW_GAP;
+            }
+        }
+    } else if (game.state === DIFFICULTY_SELECTION) {
+        let difficulties = ["Easy", "Medium", "Hard"];
+        for (let i = 0; i < difficulties.length; i++) {
+            let textWidthValue = textWidth(difficulties[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                game.aiDifficulty = i;
+                game.state = PLAYING;
+                game.turnStartTime = null;
+                game.turnTimeLeft = TURN_TIMEOUT;
+            }
+        }
+    } else if (game.state === INVITE_PLAY && (game.invitePlayState === CREATE_ROOM || game.invitePlayState === JOIN_ROOM)) {
+        let options = ["Create Room", "Join Room"];
+        for (let i = 0; i < options.length; i++) {
+            let textWidthValue = textWidth(options[i]);
+            let textHeight = 30;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 220 + i * 60 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && 
+                mouseY >= y && mouseY <= y + textHeight) {
+                game.selectedMenuItem = i;
+                if (i === 0) {
+                    game.invitePlayState = WAITING;
+                    game.createGameRoom();
+                } else if (i === 1) {
+                    game.invitePlayState = JOIN_ROOM;
+                    game.inputActive = true;
+                    game.currentInput = "";
+                }
+            }
+        }
     }
 }
-
-
 function keyPressed() {
-    // Only handle keyboard input if not on mobile
+    // Handle keyboard input only for non-mobile devices
     if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        // Existing keyPressed logic here
         if (game.state === MENU) {
             if (keyCode === UP_ARROW) {
                 game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
@@ -2833,8 +3043,22 @@ function keyPressed() {
                 }
             } else if (keyCode === BACKSPACE) {
                 game.currentInput = game.currentInput.slice(0, -1);
-            } else if (/[\w\s]/.test(key)) {
+            } else if (/[\w\s]/.test(key) && game.currentInput.length < 20) {
                 game.currentInput += key;
+            }
+        } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
+            if (keyCode === ENTER) {
+                if (game.currentInput.trim() === "") {
+                    game.setMessage("Room code cannot be empty!", 60);
+                    return;
+                }
+                game.joinGameRoom(game.currentInput.trim().toUpperCase());
+                game.inputActive = false;
+                game.currentInput = "";
+            } else if (keyCode === BACKSPACE) {
+                game.currentInput = game.currentInput.slice(0, -1);
+            } else if (/[\w]/.test(key) && game.currentInput.length < 6) {
+                game.currentInput += key.toUpperCase();
             }
         } else if (game.state === INVITE_PLAY && game.invitePlayState === CREATE_ROOM) {
             if (keyCode === UP_ARROW) {
@@ -2860,29 +3084,6 @@ function keyPressed() {
                     game.inputActive = true;
                     game.currentInput = "";
                 }
-            } else if (key === 'm' || key === 'M') {
-                game.state = MENU;
-                game.setMessage("Returned to menu", 60);
-                if (game.socket) {
-                    game.socket.disconnect();
-                    game.socket = null;
-                }
-            } else if (key === 'q' || key === 'Q') {
-                window.close();
-            }
-        } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
-            if (keyCode === ENTER) {
-                if (game.currentInput.trim() === "") {
-                    game.setMessage("Room code cannot be empty!", 60);
-                    return;
-                }
-                game.joinGameRoom(game.currentInput.trim().toUpperCase());
-                game.inputActive = false;
-                game.currentInput = "";
-            } else if (keyCode === BACKSPACE) {
-                game.currentInput = game.currentInput.slice(0, -1);
-            } else if (/[\w]/.test(key) && game.currentInput.length < 6) {
-                game.currentInput += key.toUpperCase();
             } else if (key === 'm' || key === 'M') {
                 game.state = MENU;
                 game.setMessage("Returned to menu", 60);
@@ -2957,195 +3158,4 @@ function keyPressed() {
             }
         }
     }
-}
-
-// Modify drawNameInput to remove keyboard input visuals
-Game.prototype.drawNameInput = function() {
-    background(247, 250, 252);
-    textAlign(CENTER);
-    fill(26, 32, 44);
-    textSize(34);
-    textStyle(BOLD);
-    let labelText = `Enter ${this.inputFor === 'player1' ? 'Player 1' : 'Player 2'} Name`;
-    text(labelText, WIDTH / 2, HEIGHT / 2 - 80);
-    textSize(20);
-    textStyle(NORMAL);
-    text("Tap to enter your name (max 20 characters)", WIDTH / 2, HEIGHT / 2 - 40);
-    const boxWidth = 360;
-    const boxHeight = 50;
-    stroke(26, 32, 44);
-    strokeWeight(2);
-    noFill();
-    rect(WIDTH / 2 - boxWidth / 2, HEIGHT / 2 - 10, boxWidth, boxHeight, 8);
-    fill(26, 32, 44);
-    noStroke();
-    textSize(26);
-    let inputText = this.currentInput.substring(0, 20);
-    let textWidthValue = textWidth(inputText);
-    if (textWidthValue > boxWidth - 20) {
-        let maxLength = floor((boxWidth - 20) / textWidth('a'));
-        inputText = this.currentInput.substring(0, maxLength - 3) + '...';
-    }
-    text(inputText, WIDTH / 2, HEIGHT / 2 + 8);
-};
-
-// Modify drawInvitePlay to adjust input visuals for mobile
-Game.prototype.drawInvitePlay = function() {
-    background(247, 250, 252);
-    fill(26, 32, 44);
-    textSize(50);
-    textStyle(BOLD);
-    textAlign(CENTER);
-    text("Invite Play", WIDTH / 2, 80);
-    textSize(22);
-    textStyle(NORMAL);
-    text("Play with a friend online", WIDTH / 2, 120);
-    if (this.invitePlayState === CREATE_ROOM || this.invitePlayState === JOIN_ROOM) {
-        let options = ["Create Room", "Join Room"];
-        for (let i = 0; i < options.length; i++) {
-            fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
-            textSize(30);
-            textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
-            text(options[i], WIDTH / 2, 220 + i * 60);
-        }
-        if (this.invitePlayState === JOIN_ROOM) {
-            textSize(20);
-            fill(26, 32, 44);
-            text("Tap to enter Room Code:", WIDTH / 2, 300);
-            const boxWidth = 200, boxHeight = 40;
-            stroke(26, 32, 44);
-            strokeWeight(2);
-            noFill();
-            rect(WIDTH / 2 - boxWidth / 2, 320, boxWidth, boxHeight, 8);
-            fill(26, 32, 44);
-            noStroke();
-            textSize(24);
-            let displayCode = this.currentInput || "";
-            text(displayCode.toUpperCase(), WIDTH / 2, 330);
-        }
-    } else if (this.invitePlayState === WAITING) {
-        textSize(30);
-        textStyle(NORMAL);
-        text("Room Code: " + (this.roomCode || "Generating..."), WIDTH / 2, 220);
-        if (this.roomCode) {
-            let link = `${window.location.origin}?room=${this.roomCode}`;
-            textSize(18);
-            text("Share this link:", WIDTH / 2, 260);
-            textSize(16);
-            text(link, WIDTH / 2, 290);
-            fill(this.copyButtonHover ? CORAL : [26, 32, 44]);
-            textSize(20);
-            text("Copy Link", WIDTH / 2, 330);
-            let textWidthValue = textWidth("Copy Link");
-            let textHeight = 20;
-            let x = WIDTH / 2 - textWidthValue / 2;
-            let y = 330 - textHeight / 2;
-            if (mouseX >= x && mouseX <= x + textWidthValue && mouseY >= y && mouseY <= y + textHeight) {
-                this.copyButtonHover = true;
-                if (mouseIsPressed) {
-                    navigator.clipboard.writeText(link).then(() => {
-                        this.setMessage("Link copied!", 60);
-                    });
-                }
-            } else {
-                this.copyButtonHover = false;
-            }
-        }
-        textSize(22);
-        fill(26, 32, 44);
-        text("Waiting for opponent...", WIDTH / 2, 380);
-    } else if (this.invitePlayState === PLAYING_ONLINE) {
-        this.drawBoard();
-        textSize(22);
-        text("Playing Online", WIDTH / 2, HEIGHT - 50);
-    }
-    textSize(18);
-    fill(113, 128, 150);
-    text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
-
-    if (keyCode === ENTER) {
-    if (game.state === 'localNameInput') {
-      game.player1Name = inputField1.value();
-      game.player2Name = inputField2.value();
-      game.startLocalMultiplayer();
-    } else if (game.state === 'onlineInvite') {
-      game.joinOnlineGame(inviteLinkInput.value());
-    }
-  }
-}
-
-// Helper function to check if mouse/touch is over input fields
-function isMouseOverInput() {
-  let overInput1 = mouseX >= inputField1.x && mouseX <= inputField1.x + inputField1.width &&
-                   mouseY >= inputField1.y && mouseY <= inputField1.y + inputField1.height;
-  let overInput2 = mouseX >= inputField2.x && mouseX <= inputField2.x + inputField2.width &&
-                   mouseY >= inputField2.y && mouseY <= inputField2.y + inputField2.height;
-  let overInviteInput = mouseX >= inviteLinkInput.x && mouseX <= inviteLinkInput.x + inviteLinkInput.width &&
-                       mouseY >= inviteLinkInput.y && mouseY <= inviteLinkInput.y + inviteLinkInput.height;
-  return overInput1 || overInput2 || overInviteInput;
-}
-
-// Assume Game class has methods like draw, handleMousePress, startLocalMultiplayer, joinOnlineGame
-class Game {
-  constructor() {
-    this.state = 'menu';
-    this.player1Name = '';
-    this.player2Name = '';
-  }
-  
-  draw() {
-    background(255);
-    if (this.state === 'localNameInput') {
-      inputField1.show();
-      inputField2.show();
-      textAlign(CENTER);
-      textSize(20);
-      text('Enter Player Names', width / 2, 250);
-    } else if (this.state === 'onlineInvite') {
-      inviteLinkInput.show();
-      textAlign(CENTER);
-      textSize(20);
-      text('Enter Invite Link', width / 2, 350);
-    } else {
-      inputField1.hide();
-      inputField2.hide();
-      inviteLinkInput.hide();
-    }
-    // Additional game drawing logic here
-  }
-  
-  handleMousePress(x, y) {
-    // Game logic for handling mouse/touch press
-  }
-  
-  startLocalMultiplayer() {
-    this.state = 'playing';
-    // Initialize local multiplayer game
-  }
-  
-  joinOnlineGame(link) {
-    this.state = 'playing';
-    // Join online game using link
-  }
-}
-;
-
-function mousePressed() {
-  // Ensure canvas doesn't interfere with input fields
-  if (!isMouseOverInput()) {
-    game.handleMousePress(mouseX, mouseY);
-  }
-}
-
-function touchStarted() {
-  // Handle touch events for mobile
-  if (!isMouseOverInput()) {
-    game.handleMousePress(mouseX, mouseY);
-  }
-  return false; // Prevent default touch behavior
-}
-
-function touchEnded() {
-  // Ensure touch release doesn't trigger unwanted actions
-  return false;
 }
