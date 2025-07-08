@@ -1404,9 +1404,6 @@ drawInvitePlay() {
             text(options[i], WIDTH / 2, 220 + i * 60);
         }
         if (this.invitePlayState === JOIN_ROOM) {
-            textSize(20);
-            fill(26, 32, 44);
-            text("Tap to enter Room Code", WIDTH / 2, 300);
             const boxWidth = 200, boxHeight = 40;
             stroke(26, 32, 44);
             strokeWeight(2);
@@ -1417,12 +1414,16 @@ drawInvitePlay() {
             textSize(24);
             let displayCode = this.currentInput || "";
             // Show cursor only for non-mobile devices
-            if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                if (this.inputActive && frameCount % 60 < 30) {
-                    displayCode += "|";
-                }
+            if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && this.inputActive && frameCount % 60 < 30) {
+                displayCode += "|";
             }
             text(displayCode.toUpperCase(), WIDTH / 2, 330);
+            // Show tap instruction only if no input field exists
+            let input = document.getElementById('game-input');
+            if (!input && /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                textSize(20);
+                text("Tap to enter Room Code", WIDTH / 2, 300);
+            }
         }
         textSize(18);
         fill(113, 128, 150);
@@ -1467,6 +1468,7 @@ drawInvitePlay() {
     fill(113, 128, 150);
     text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
 };
+
 }
 initSocket() {
     this.socket = io('http://localhost:3000');
@@ -1703,9 +1705,6 @@ drawDifficultySelection() {
     textStyle(BOLD);
     let labelText = `Enter ${this.inputFor === 'player1' ? 'Player 1' : 'Player 2'} Name`;
     text(labelText, WIDTH / 2, HEIGHT / 2 - 80);
-    textSize(20);
-    textStyle(NORMAL);
-    text("Tap to enter name (max 20 characters)", WIDTH / 2, HEIGHT / 2 - 40);
     const boxWidth = 360;
     const boxHeight = 50;
     stroke(26, 32, 44);
@@ -1721,17 +1720,32 @@ drawDifficultySelection() {
         let maxLength = floor((boxWidth - 20) / textWidth('a'));
         inputText = this.currentInput.substring(0, maxLength - 3) + '...';
     }
-    // Show cursor only for non-mobile devices
-    if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        if (this.inputActive && frameCount % 60 < 30) {
-            inputText += "|";
-        }
+    // Show cursor only for non-mobile devices when input is active
+    if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && this.inputActive && frameCount % 60 < 30) {
+        inputText += "|";
     }
     text(inputText, WIDTH / 2, HEIGHT / 2 + 8);
     textSize(18);
     fill(113, 128, 150);
+    // Show tap instruction only if no input field exists
+    let input = document.getElementById('game-input');
+    if (!input && /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        text("Tap to enter name (max 20 characters)", WIDTH / 2, HEIGHT / 2 - 40);
+    }
     text("Press ENTER to confirm, BACKSPACE to delete", WIDTH / 2, HEIGHT / 2 + 70);
 };
+
+
+        // Add to Game.prototype to clean up input field on state change
+Game.prototype.cleanupInput = function() {
+    let input = document.getElementById('game-input');
+    if (input) {
+        input.remove();
+    }
+    this.inputActive = false;
+    this.currentInput = "";
+};
+
     }
 
 
@@ -2676,12 +2690,12 @@ function mousePressed() {
 
 
 function touchStarted() {
+    let input = document.getElementById('game-input');
     if (game.state === NAME_INPUT && game.inputActive) {
-        // Create or reuse input element for name input
-        let input = document.getElementById('name-input');
+        // Reuse or create input element for name input
         if (!input) {
             input = document.createElement('input');
-            input.id = 'name-input';
+            input.id = 'game-input';
             input.type = 'text';
             input.maxLength = 20;
             input.style.position = 'absolute';
@@ -2693,47 +2707,59 @@ function touchStarted() {
             input.style.textAlign = 'center';
             input.style.border = '2px solid #1A202C';
             input.style.borderRadius = '8px';
+            input.style.boxSizing = 'border-box';
+            input.style.fontFamily = 'Arial, sans-serif';
             input.value = game.currentInput;
             document.body.appendChild(input);
-            input.focus();
-            input.addEventListener('input', () => {
-                game.currentInput = input.value;
-            });
-            input.addEventListener('blur', () => {
-                if (game.currentInput.trim() === "") {
-                    game.setMessage("Name cannot be empty!", 60);
+        } else {
+            // Update existing input for name input
+            input.type = 'text';
+            input.maxLength = 20;
+            input.style.left = `${WIDTH / 2 - 180}px`;
+            input.style.top = `${HEIGHT / 2 - 5}px`;
+            input.style.width = '360px';
+            input.value = game.currentInput;
+        }
+        input.focus();
+        // Remove existing event listeners to prevent duplicates
+        input.oninput = null;
+        input.onblur = null;
+        input.oninput = () => {
+            game.currentInput = input.value;
+        };
+        input.onblur = () => {
+            if (game.currentInput.trim() === "") {
+                game.setMessage("Name cannot be empty!", 60);
+                input.focus();
+                return;
+            }
+            if (game.inputFor === 'player1') {
+                game.player1Name = game.currentInput.substring(0, 20).trim() || "Player 1";
+                game.currentInput = "";
+                if (game.gameMode === LOCAL_MULTIPLAYER) {
+                    game.inputFor = "player2";
+                    input.value = "";
                     input.focus();
-                    return;
-                }
-                if (game.inputFor === 'player1') {
-                    game.player1Name = game.currentInput.substring(0, 20).trim() || "Player 1";
-                    game.currentInput = "";
-                    if (game.gameMode === LOCAL_MULTIPLAYER) {
-                        game.inputFor = "player2";
-                        input.value = "";
-                    } else {
-                        game.inputActive = false;
-                        game.state = SIDE_SELECTION;
-                        game.selectedMenuItem = 0;
-                        input.remove();
-                    }
-                } else if (game.inputFor === 'player2') {
-                    game.player2Name = game.currentInput.substring(0, 20).trim() || "Player 2";
-                    game.currentInput = "";
+                } else {
                     game.inputActive = false;
-                    game.state = THEME_SELECTION;
+                    game.state = SIDE_SELECTION;
                     game.selectedMenuItem = 0;
                     input.remove();
                 }
-            });
-        }
-        input.focus();
+            } else if (game.inputFor === 'player2') {
+                game.player2Name = game.currentInput.substring(0, 20).trim() || "Player 2";
+                game.currentInput = "";
+                game.inputActive = false;
+                game.state = THEME_SELECTION;
+                game.selectedMenuItem = 0;
+                input.remove();
+            }
+        };
     } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
-        // Create or reuse input element for room code
-        let input = document.getElementById('room-code-input');
+        // Reuse or create input element for room code
         if (!input) {
             input = document.createElement('input');
-            input.id = 'room-code-input';
+            input.id = 'game-input';
             input.type = 'text';
             input.maxLength = 6;
             input.style.position = 'absolute';
@@ -2745,26 +2771,39 @@ function touchStarted() {
             input.style.textAlign = 'center';
             input.style.border = '2px solid #1A202C';
             input.style.borderRadius = '8px';
+            input.style.boxSizing = 'border-box';
+            input.style.fontFamily = 'Arial, sans-serif';
             input.style.textTransform = 'uppercase';
             input.value = game.currentInput;
             document.body.appendChild(input);
-            input.focus();
-            input.addEventListener('input', () => {
-                game.currentInput = input.value.toUpperCase();
-            });
-            input.addEventListener('blur', () => {
-                if (game.currentInput.trim() === "") {
-                    game.setMessage("Room code cannot be empty!", 60);
-                    input.focus();
-                    return;
-                }
-                game.joinGameRoom(game.currentInput.trim().toUpperCase());
-                game.inputActive = false;
-                game.currentInput = "";
-                input.remove();
-            });
+        } else {
+            // Update existing input for room code
+            input.type = 'text';
+            input.maxLength = 6;
+            input.style.left = `${WIDTH / 2 - 100}px`;
+            input.style.top = '320px';
+            input.style.width = '200px';
+            input.style.textTransform = 'uppercase';
+            input.value = game.currentInput;
         }
         input.focus();
+        // Remove existing event listeners to prevent duplicates
+        input.oninput = null;
+        input.onblur = null;
+        input.oninput = () => {
+            game.currentInput = input.value.toUpperCase();
+        };
+        input.onblur = () => {
+            if (game.currentInput.trim() === "") {
+                game.setMessage("Room code cannot be empty!", 60);
+                input.focus();
+                return;
+            }
+            game.joinGameRoom(game.currentInput.trim().toUpperCase());
+            game.inputActive = false;
+            game.currentInput = "";
+            input.remove();
+        };
     } else if (game.state === PLAYING && game.gameMode === ONLINE_MULTIPLAYER && game.currentTurn !== game.playerSide) {
         return;
     } else if (game.state === PLAYING) {
@@ -3055,6 +3094,7 @@ function keyPressed() {
                 game.joinGameRoom(game.currentInput.trim().toUpperCase());
                 game.inputActive = false;
                 game.currentInput = "";
+                game.cleanupInput();
             } else if (keyCode === BACKSPACE) {
                 game.currentInput = game.currentInput.slice(0, -1);
             } else if (/[\w]/.test(key) && game.currentInput.length < 6) {
@@ -3091,7 +3131,9 @@ function keyPressed() {
                     game.socket.disconnect();
                     game.socket = null;
                 }
+                game.cleanupInput();
             } else if (key === 'q' || key === 'Q') {
+                game.cleanupInput();
                 window.close();
             }
         } else if (game.state === INVITE_PLAY && game.invitePlayState === WAITING) {
@@ -3102,7 +3144,9 @@ function keyPressed() {
                     game.socket.disconnect();
                     game.socket = null;
                 }
+                game.cleanupInput();
             } else if (key === 'q' || key === 'Q') {
+                game.cleanupInput();
                 window.close();
             }
         } else if (game.state === PLAYING && (game.gameMode === SINGLE_PLAYER || game.gameMode === LOCAL_MULTIPLAYER)) {
@@ -3141,6 +3185,7 @@ function keyPressed() {
                 if (game.gameMode === ONLINE_MULTIPLAYER) {
                     game.createGameRoom();
                 }
+                game.cleanupInput();
             } else if (key === 'm' || key === 'M') {
                 const overlay = document.querySelector('.game-overlay');
                 if (overlay) overlay.remove();
@@ -3151,9 +3196,11 @@ function keyPressed() {
                     game.socket.disconnect();
                     game.socket = null;
                 }
+                game.cleanupInput();
             } else if (key === 'q' || key === 'Q') {
                 const overlay = document.querySelector('.game-overlay');
                 if (overlay) overlay.remove();
+                game.cleanupInput();
                 window.close();
             }
         }
