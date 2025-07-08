@@ -2551,275 +2551,479 @@ function mousePressed() {
     }
 }
 
-function keyPressed() {
-    if (game.state === MENU) {
-        if (keyCode === UP_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
-        } else if (keyCode === DOWN_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
-        } else if (keyCode === ENTER) {
-            if (game.selectedMenuItem === 0) {
-                game.gameMode = SINGLE_PLAYER;
-                game.state = SIDE_SELECTION;
-                game.selectedMenuItem = 0;
-            } else if (game.selectedMenuItem === 1) {
-                game.gameMode = LOCAL_MULTIPLAYER;
-                game.state = NAME_INPUT;
-                game.inputFor = "player1";
-                game.inputActive = true;
-            } else if (game.selectedMenuItem === 2) {
-                game.gameMode = ONLINE_MULTIPLAYER;
-                game.state = INVITE_PLAY;
-                game.invitePlayState = CREATE_ROOM;
-                game.selectedMenuItem = 0;
-                game.initSocket();
-            }
-        } else if (key === '1' || key === '2' || key === '3') {
-            game.selectedMenuItem = parseInt(key) - 1;
-            if (game.selectedMenuItem === 0) {
-                game.gameMode = SINGLE_PLAYER;
-                game.state = SIDE_SELECTION;
-                game.selectedMenuItem = 0;
-            } else if (game.selectedMenuItem === 1) {
-                game.gameMode = LOCAL_MULTIPLAYER;
-                game.state = NAME_INPUT;
-                game.inputFor = "player1";
-                game.inputActive = true;
-            } else if (game.selectedMenuItem === 2) {
-                game.gameMode = ONLINE_MULTIPLAYER;
-                game.state = INVITE_PLAY;
-                game.invitePlayState = CREATE_ROOM;
-                game.selectedMenuItem = 0;
-                game.initSocket();
-            }
-        } else if (key === 'q' || key === 'Q') {
-            window.close();
-        }
-    } else if (game.state === SIDE_SELECTION) {
-        if (keyCode === UP_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
-        } else if (keyCode === DOWN_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
-        } else if (keyCode === ENTER) {
-            if (game.selectedMenuItem === 0) {
-                game.playerSide = 'tiger';
-                game.aiSide = 'goat';
-            } else if (game.selectedMenuItem === 1) {
-                game.playerSide = 'goat';
-                game.aiSide = 'tiger';
-            } else if (game.selectedMenuItem === 2) {
-                let sides = ['tiger', 'goat'];
-                game.playerSide = random(sides);
-                game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
-            }
-            game.state = THEME_SELECTION;
-            game.selectedMenuItem = 0;
-        } else if (key === '1' || key === '2' || key === '3') {
-            game.selectedMenuItem = parseInt(key) - 1;
-            if (game.selectedMenuItem === 0) {
-                game.playerSide = 'tiger';
-                game.aiSide = 'goat';
-            } else if (game.selectedMenuItem === 1) {
-                game.playerSide = 'goat';
-                game.aiSide = 'tiger';
-            } else if (game.selectedMenuItem === 2) {
-                let sides = ['tiger', 'goat'];
-                game.playerSide = random(sides);
-                game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
-            }
-            game.state = THEME_SELECTION;
-            game.selectedMenuItem = 0;
-        }
-    } else if (game.state === THEME_SELECTION) {
-        if (keyCode === LEFT_ARROW && game.selectedMenuItem > 0) {
-            game.selectedMenuItem--;
-        } else if (keyCode === RIGHT_ARROW && game.selectedMenuItem < THEMES.length - 1) {
-            game.selectedMenuItem++;
-        } else if (keyCode === ENTER) {
-            game.selectedTheme = game.selectedMenuItem;
-            if (game.gameMode === SINGLE_PLAYER) {
-                game.state = DIFFICULTY_SELECTION;
-            } else {
-                game.state = PLAYING;
-                game.turnStartTime = null;
-                game.turnTimeLeft = TURN_TIMEOUT;
-            }
-            game.selectedMenuItem = 0;
-        } else if (key >= '1' && key <= String(THEMES.length)) {
-            game.selectedMenuItem = parseInt(key) - 1;
-            game.selectedTheme = game.selectedMenuItem;
-            if (game.gameMode === SINGLE_PLAYER) {
-                game.state = DIFFICULTY_SELECTION;
-            } else {
-                game.state = PLAYING;
-                game.turnStartTime = null;
-                game.turnTimeLeft = TURN_TIMEOUT;
-            }
-            game.selectedMenuItem = 0;
-        }
-    } else if (game.state === DIFFICULTY_SELECTION) {
-        if (keyCode === UP_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
-        } else if (keyCode === DOWN_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
-        } else if (keyCode === ENTER) {
-            game.aiDifficulty = game.selectedMenuItem;
-            game.state = PLAYING;
-            game.turnStartTime = null;
-            game.turnTimeLeft = TURN_TIMEOUT;
-        } else if (key === '1' || key === '2' || key === '3') {
-            game.selectedMenuItem = parseInt(key) - 1;
-            game.aiDifficulty = game.selectedMenuItem;
-            game.state = PLAYING;
-            game.turnStartTime = null;
-            game.turnTimeLeft = TURN_TIMEOUT;
-        }
-    } else if (game.state === NAME_INPUT && game.inputActive) {
-        if (keyCode === ENTER) {
-            if (game.currentInput.trim() === "") {
-                game.setMessage("Name cannot be empty!", 60);
-                return;
-            }
-            if (game.inputFor === 'player1') {
-                game.player1Name = game.currentInput.substring(0, 20).trim() || "Player 1";
-                game.currentInput = "";
-                if (game.gameMode === LOCAL_MULTIPLAYER) {
-                    game.inputFor = "player2";
-                } else {
+
+function touchStarted() {
+    if (game.state === NAME_INPUT && game.inputActive) {
+        // Create or reuse input element for name input
+        let input = document.getElementById('name-input');
+        if (!input) {
+            input = document.createElement('input');
+            input.id = 'name-input';
+            input.type = 'text';
+            input.maxLength = 20;
+            input.style.position = 'absolute';
+            input.style.left = `${WIDTH / 2 - 180}px`;
+            input.style.top = `${HEIGHT / 2 - 5}px`;
+            input.style.width = '360px';
+            input.style.height = '40px';
+            input.style.fontSize = '24px';
+            input.style.textAlign = 'center';
+            input.style.border = '2px solid #1A202C';
+            input.style.borderRadius = '8px';
+            input.value = game.currentInput;
+            document.body.appendChild(input);
+            input.focus();
+            input.addEventListener('input', () => {
+                game.currentInput = input.value;
+            });
+            input.addEventListener('blur', () => {
+                if (game.currentInput.trim() === "") {
+                    game.setMessage("Name cannot be empty!", 60);
+                    input.focus();
+                    return;
+                }
+                if (game.inputFor === 'player1') {
+                    game.player1Name = game.currentInput.substring(0, 20).trim() || "Player 1";
+                    game.currentInput = "";
+                    if (game.gameMode === LOCAL_MULTIPLAYER) {
+                        game.inputFor = "player2";
+                        input.value = "";
+                    } else {
+                        game.inputActive = false;
+                        game.state = SIDE_SELECTION;
+                        game.selectedMenuItem = 0;
+                        input.remove();
+                    }
+                } else if (game.inputFor === 'player2') {
+                    game.player2Name = game.currentInput.substring(0, 20).trim() || "Player 2";
+                    game.currentInput = "";
                     game.inputActive = false;
+                    game.state = THEME_SELECTION;
+                    game.selectedMenuItem = 0;
+                    input.remove();
+                }
+            });
+        }
+        input.focus();
+    } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
+        // Create or reuse input element for room code
+        let input = document.getElementById('room-code-input');
+        if (!input) {
+            input = document.createElement('input');
+            input.id = 'room-code-input';
+            input.type = 'text';
+            input.maxLength = 6;
+            input.style.position = 'absolute';
+            input.style.left = `${WIDTH / 2 - 100}px`;
+            input.style.top = '320px';
+            input.style.width = '200px';
+            input.style.height = '40px';
+            input.style.fontSize = '24px';
+            input.style.textAlign = 'center';
+            input.style.border = '2px solid #1A202C';
+            input.style.borderRadius = '8px';
+            input.style.textTransform = 'uppercase';
+            input.value = game.currentInput;
+            document.body.appendChild(input);
+            input.focus();
+            input.addEventListener('input', () => {
+                game.currentInput = input.value.toUpperCase();
+            });
+            input.addEventListener('blur', () => {
+                if (game.currentInput.trim() === "") {
+                    game.setMessage("Room code cannot be empty!", 60);
+                    input.focus();
+                    return;
+                }
+                game.joinGameRoom(game.currentInput.trim().toUpperCase());
+                game.inputActive = false;
+                game.currentInput = "";
+                input.remove();
+            });
+        }
+        input.focus();
+    }
+}
+
+
+function keyPressed() {
+    // Only handle keyboard input if not on mobile
+    if (!/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        // Existing keyPressed logic here
+        if (game.state === MENU) {
+            if (keyCode === UP_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
+            } else if (keyCode === DOWN_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
+            } else if (keyCode === ENTER) {
+                if (game.selectedMenuItem === 0) {
+                    game.gameMode = SINGLE_PLAYER;
                     game.state = SIDE_SELECTION;
                     game.selectedMenuItem = 0;
+                } else if (game.selectedMenuItem === 1) {
+                    game.gameMode = LOCAL_MULTIPLAYER;
+                    game.state = NAME_INPUT;
+                    game.inputFor = "player1";
+                    game.inputActive = true;
+                } else if (game.selectedMenuItem === 2) {
+                    game.gameMode = ONLINE_MULTIPLAYER;
+                    game.state = INVITE_PLAY;
+                    game.invitePlayState = CREATE_ROOM;
+                    game.selectedMenuItem = 0;
+                    game.initSocket();
                 }
-            } else if (game.inputFor === 'player2') {
-                game.player2Name = game.currentInput.substring(0, 20).trim() || "Player 2";
-                game.currentInput = "";
-                game.inputActive = false;
+            } else if (key === '1' || key === '2' || key === '3') {
+                game.selectedMenuItem = parseInt(key) - 1;
+                if (game.selectedMenuItem === 0) {
+                    game.gameMode = SINGLE_PLAYER;
+                    game.state = SIDE_SELECTION;
+                    game.selectedMenuItem = 0;
+                } else if (game.selectedMenuItem === 1) {
+                    game.gameMode = LOCAL_MULTIPLAYER;
+                    game.state = NAME_INPUT;
+                    game.inputFor = "player1";
+                    game.inputActive = true;
+                } else if (game.selectedMenuItem === 2) {
+                    game.gameMode = ONLINE_MULTIPLAYER;
+                    game.state = INVITE_PLAY;
+                    game.invitePlayState = CREATE_ROOM;
+                    game.selectedMenuItem = 0;
+                    game.initSocket();
+                }
+            } else if (key === 'q' || key === 'Q') {
+                window.close();
+            }
+        } else if (game.state === SIDE_SELECTION) {
+            if (keyCode === UP_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
+            } else if (keyCode === DOWN_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
+            } else if (keyCode === ENTER) {
+                if (game.selectedMenuItem === 0) {
+                    game.playerSide = 'tiger';
+                    game.aiSide = 'goat';
+                } else if (game.selectedMenuItem === 1) {
+                    game.playerSide = 'goat';
+                    game.aiSide = 'tiger';
+                } else if (game.selectedMenuItem === 2) {
+                    let sides = ['tiger', 'goat'];
+                    game.playerSide = random(sides);
+                    game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
+                }
+                game.state = THEME_SELECTION;
+                game.selectedMenuItem = 0;
+            } else if (key === '1' || key === '2' || key === '3') {
+                game.selectedMenuItem = parseInt(key) - 1;
+                if (game.selectedMenuItem === 0) {
+                    game.playerSide = 'tiger';
+                    game.aiSide = 'goat';
+                } else if (game.selectedMenuItem === 1) {
+                    game.playerSide = 'goat';
+                    game.aiSide = 'tiger';
+                } else if (game.selectedMenuItem === 2) {
+                    let sides = ['tiger', 'goat'];
+                    game.playerSide = random(sides);
+                    game.aiSide = game.playerSide === 'tiger' ? 'goat' : 'tiger';
+                }
                 game.state = THEME_SELECTION;
                 game.selectedMenuItem = 0;
             }
-        } else if (keyCode === BACKSPACE) {
-            game.currentInput = game.currentInput.slice(0, -1);
-        } else if (/[\w\s]/.test(key)) {
-            game.currentInput += key;
-        }
-    } else if (game.state === INVITE_PLAY && game.invitePlayState === CREATE_ROOM) {
-        if (keyCode === UP_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem - 1 + 2) % 2;
-        } else if (keyCode === DOWN_ARROW) {
-            game.selectedMenuItem = (game.selectedMenuItem + 1) % 2;
-        } else if (keyCode === ENTER) {
-            if (game.selectedMenuItem === 0) {
-                game.invitePlayState = WAITING;
-                game.createGameRoom();
-            } else if (game.selectedMenuItem === 1) {
-                game.invitePlayState = JOIN_ROOM;
-                game.inputActive = true;
+        } else if (game.state === THEME_SELECTION) {
+            if (keyCode === LEFT_ARROW && game.selectedMenuItem > 0) {
+                game.selectedMenuItem--;
+            } else if (keyCode === RIGHT_ARROW && game.selectedMenuItem < THEMES.length - 1) {
+                game.selectedMenuItem++;
+            } else if (keyCode === ENTER) {
+                game.selectedTheme = game.selectedMenuItem;
+                if (game.gameMode === SINGLE_PLAYER) {
+                    game.state = DIFFICULTY_SELECTION;
+                } else {
+                    game.state = PLAYING;
+                    game.turnStartTime = null;
+                    game.turnTimeLeft = TURN_TIMEOUT;
+                }
+                game.selectedMenuItem = 0;
+            } else if (key >= '1' && key <= String(THEMES.length)) {
+                game.selectedMenuItem = parseInt(key) - 1;
+                game.selectedTheme = game.selectedMenuItem;
+                if (game.gameMode === SINGLE_PLAYER) {
+                    game.state = DIFFICULTY_SELECTION;
+                } else {
+                    game.state = PLAYING;
+                    game.turnStartTime = null;
+                    game.turnTimeLeft = TURN_TIMEOUT;
+                }
+                game.selectedMenuItem = 0;
+            }
+        } else if (game.state === DIFFICULTY_SELECTION) {
+            if (keyCode === UP_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem - 1 + 3) % 3;
+            } else if (keyCode === DOWN_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem + 1) % 3;
+            } else if (keyCode === ENTER) {
+                game.aiDifficulty = game.selectedMenuItem;
+                game.state = PLAYING;
+                game.turnStartTime = null;
+                game.turnTimeLeft = TURN_TIMEOUT;
+            } else if (key === '1' || key === '2' || key === '3') {
+                game.selectedMenuItem = parseInt(key) - 1;
+                game.aiDifficulty = game.selectedMenuItem;
+                game.state = PLAYING;
+                game.turnStartTime = null;
+                game.turnTimeLeft = TURN_TIMEOUT;
+            }
+        } else if (game.state === NAME_INPUT && game.inputActive) {
+            if (keyCode === ENTER) {
+                if (game.currentInput.trim() === "") {
+                    game.setMessage("Name cannot be empty!", 60);
+                    return;
+                }
+                if (game.inputFor === 'player1') {
+                    game.player1Name = game.currentInput.substring(0, 20).trim() || "Player 1";
+                    game.currentInput = "";
+                    if (game.gameMode === LOCAL_MULTIPLAYER) {
+                        game.inputFor = "player2";
+                    } else {
+                        game.inputActive = false;
+                        game.state = SIDE_SELECTION;
+                        game.selectedMenuItem = 0;
+                    }
+                } else if (game.inputFor === 'player2') {
+                    game.player2Name = game.currentInput.substring(0, 20).trim() || "Player 2";
+                    game.currentInput = "";
+                    game.inputActive = false;
+                    game.state = THEME_SELECTION;
+                    game.selectedMenuItem = 0;
+                }
+            } else if (keyCode === BACKSPACE) {
+                game.currentInput = game.currentInput.slice(0, -1);
+            } else if (/[\w\s]/.test(key)) {
+                game.currentInput += key;
+            }
+        } else if (game.state === INVITE_PLAY && game.invitePlayState === CREATE_ROOM) {
+            if (keyCode === UP_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem - 1 + 2) % 2;
+            } else if (keyCode === DOWN_ARROW) {
+                game.selectedMenuItem = (game.selectedMenuItem + 1) % 2;
+            } else if (keyCode === ENTER) {
+                if (game.selectedMenuItem === 0) {
+                    game.invitePlayState = WAITING;
+                    game.createGameRoom();
+                } else if (game.selectedMenuItem === 1) {
+                    game.invitePlayState = JOIN_ROOM;
+                    game.inputActive = true;
+                    game.currentInput = "";
+                }
+            } else if (key === '1' || key === '2') {
+                game.selectedMenuItem = parseInt(key) - 1;
+                if (game.selectedMenuItem === 0) {
+                    game.invitePlayState = WAITING;
+                    game.createGameRoom();
+                } else if (game.selectedMenuItem === 1) {
+                    game.invitePlayState = JOIN_ROOM;
+                    game.inputActive = true;
+                    game.currentInput = "";
+                }
+            } else if (key === 'm' || key === 'M') {
+                game.state = MENU;
+                game.setMessage("Returned to menu", 60);
+                if (game.socket) {
+                    game.socket.disconnect();
+                    game.socket = null;
+                }
+            } else if (key === 'q' || key === 'Q') {
+                window.close();
+            }
+        } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
+            if (keyCode === ENTER) {
+                if (game.currentInput.trim() === "") {
+                    game.setMessage("Room code cannot be empty!", 60);
+                    return;
+                }
+                game.joinGameRoom(game.currentInput.trim().toUpperCase());
+                game.inputActive = false;
                 game.currentInput = "";
+            } else if (keyCode === BACKSPACE) {
+                game.currentInput = game.currentInput.slice(0, -1);
+            } else if (/[\w]/.test(key) && game.currentInput.length < 6) {
+                game.currentInput += key.toUpperCase();
+            } else if (key === 'm' || key === 'M') {
+                game.state = MENU;
+                game.setMessage("Returned to menu", 60);
+                if (game.socket) {
+                    game.socket.disconnect();
+                    game.socket = null;
+                }
+            } else if (key === 'q' || key === 'Q') {
+                window.close();
             }
-        } else if (key === '1' || key === '2') {
-            game.selectedMenuItem = parseInt(key) - 1;
-            if (game.selectedMenuItem === 0) {
-                game.invitePlayState = WAITING;
-                game.createGameRoom();
-            } else if (game.selectedMenuItem === 1) {
-                game.invitePlayState = JOIN_ROOM;
-                game.inputActive = true;
-                game.currentInput = "";
+        } else if (game.state === INVITE_PLAY && game.invitePlayState === WAITING) {
+            if (key === 'm' || key === 'M') {
+                game.state = MENU;
+                game.setMessage("Returned to menu", 60);
+                if (game.socket) {
+                    game.socket.disconnect();
+                    game.socket = null;
+                }
+            } else if (key === 'q' || key === 'Q') {
+                window.close();
             }
-        } else if (key === 'm' || key === 'M') {
-            game.state = MENU;
-            game.setMessage("Returned to menu", 60);
-            if (game.socket) {
-                game.socket.disconnect();
-                game.socket = null;
+        } else if (game.state === PLAYING && (game.gameMode === SINGLE_PLAYER || game.gameMode === LOCAL_MULTIPLAYER)) {
+            if (key === 'z' || key === 'Z') {
+                game.undoMove();
+            } else if (key === 'y' || key === 'Y') {
+                game.redoMove();
+            } else if (key === 'b' || key === 'B' && game.aiDifficulty === HARD) {
+                game.useMinimax = false;
+                game.useMcts = false;
+                game.setMessage("Switched to BFS", 60);
+            } else if (key === 'm' || key === 'M' && game.aiDifficulty === HARD) {
+                game.useMinimax = true;
+                game.useMcts = false;
+                game.setMessage("Switched to Minimax", 60);
+            } else if (key === 't' || key === 'T' && game.aiDifficulty === HARD) {
+                game.useMinimax = false;
+                game.useMcts = true;
+                game.setMessage("Switched to MCTS", 60);
+            } else if (key === 'h' || key === 'H') {
+                game.requestHint();
+            } else if (key === 'v' || key === 'V') {
+                game.showBfs = !game.showBfs;
+                game.setMessage(`BFS Viz: ${game.showBfs ? 'ON' : 'OFF'}`, 60);
+            } else if (key === 'g' || key === 'G') {
+                game.giveUp();
             }
-        } else if (key === 'q' || key === 'Q') {
-            window.close();
-        }
-    } else if (game.state === INVITE_PLAY && game.invitePlayState === JOIN_ROOM && game.inputActive) {
-        if (keyCode === ENTER) {
-            if (game.currentInput.trim() === "") {
-                game.setMessage("Room code cannot be empty!", 60);
-                return;
+        } else if (game.state === GAME_OVER) {
+            if (key === 'r' || key === 'R') {
+                const overlay = document.querySelector('.game-overlay');
+                if (overlay) overlay.remove();
+                game.resetGame();
+                game.state = game.gameMode === ONLINE_MULTIPLAYER ? INVITE_PLAY : PLAYING;
+                game.invitePlayState = game.gameMode === ONLINE_MULTIPLAYER ? WAITING : CREATE_ROOM;
+                game.setMessage("Game restarted", 60);
+                if (game.gameMode === ONLINE_MULTIPLAYER) {
+                    game.createGameRoom();
+                }
+            } else if (key === 'm' || key === 'M') {
+                const overlay = document.querySelector('.game-overlay');
+                if (overlay) overlay.remove();
+                game.resetGame();
+                game.state = MENU;
+                game.setMessage("Returned to menu", 60);
+                if (game.socket) {
+                    game.socket.disconnect();
+                    game.socket = null;
+                }
+            } else if (key === 'q' || key === 'Q') {
+                const overlay = document.querySelector('.game-overlay');
+                if (overlay) overlay.remove();
+                window.close();
             }
-            game.joinGameRoom(game.currentInput.trim().toUpperCase());
-            game.inputActive = false;
-            game.currentInput = "";
-        } else if (keyCode === BACKSPACE) {
-            game.currentInput = game.currentInput.slice(0, -1);
-        } else if (/[\w]/.test(key) && game.currentInput.length < 6) {
-            game.currentInput += key.toUpperCase();
-        } else if (key === 'm' || key === 'M') {
-            game.state = MENU;
-            game.setMessage("Returned to menu", 60);
-            if (game.socket) {
-                game.socket.disconnect();
-                game.socket = null;
-            }
-        } else if (key === 'q' || key === 'Q') {
-            window.close();
-        }
-    } else if (game.state === INVITE_PLAY && game.invitePlayState === WAITING) {
-        if (key === 'm' || key === 'M') {
-            game.state = MENU;
-            game.setMessage("Returned to menu", 60);
-            if (game.socket) {
-                game.socket.disconnect();
-                game.socket = null;
-            }
-        } else if (key === 'q' || key === 'Q') {
-            window.close();
-        }
-    } else if (game.state === PLAYING && (game.gameMode === SINGLE_PLAYER || game.gameMode === LOCAL_MULTIPLAYER)) {
-        if (key === 'z' || key === 'Z') {
-            game.undoMove();
-        } else if (key === 'y' || key === 'Y') {
-            game.redoMove();
-        } else if (key === 'b' || key === 'B' && game.aiDifficulty === HARD) {
-            game.useMinimax = false;
-            game.useMcts = false;
-            game.setMessage("Switched to BFS", 60);
-        } else if (key === 'm' || key === 'M' && game.aiDifficulty === HARD) {
-            game.useMinimax = true;
-            game.useMcts = false;
-            game.setMessage("Switched to Minimax", 60);
-        } else if (key === 't' || key === 'T' && game.aiDifficulty === HARD) {
-            game.useMinimax = false;
-            game.useMcts = true;
-            game.setMessage("Switched to MCTS", 60);
-        } else if (key === 'h' || key === 'H') {
-            game.requestHint();
-        } else if (key === 'v' || key === 'V') {
-            game.showBfs = !game.showBfs;
-            game.setMessage(`BFS Viz: ${game.showBfs ? 'ON' : 'OFF'}`, 60);
-        } else if (key === 'g' || key === 'G') {
-            game.giveUp();
-        }
-    } else if (game.state === GAME_OVER) {
-        if (key === 'r' || key === 'R') {
-            const overlay = document.querySelector('.game-overlay');
-            if (overlay) overlay.remove();
-            game.resetGame();
-            game.state = game.gameMode === ONLINE_MULTIPLAYER ? INVITE_PLAY : PLAYING;
-            game.invitePlayState = game.gameMode === ONLINE_MULTIPLAYER ? WAITING : CREATE_ROOM;
-            game.setMessage("Game restarted", 60);
-            if (game.gameMode === ONLINE_MULTIPLAYER) {
-                game.createGameRoom();
-            }
-        } else if (key === 'm' || key === 'M') {
-            const overlay = document.querySelector('.game-overlay');
-            if (overlay) overlay.remove();
-            game.resetGame();
-            game.state = MENU;
-            game.setMessage("Returned to menu", 60);
-            if (game.socket) {
-                game.socket.disconnect();
-                game.socket = null;
-            }
-        } else if (key === 'q' || key === 'Q') {
-            const overlay = document.querySelector('.game-overlay');
-            if (overlay) overlay.remove();
-            window.close();
         }
     }
 }
+
+// Modify drawNameInput to remove keyboard input visuals
+Game.prototype.drawNameInput = function() {
+    background(247, 250, 252);
+    textAlign(CENTER);
+    fill(26, 32, 44);
+    textSize(34);
+    textStyle(BOLD);
+    let labelText = `Enter ${this.inputFor === 'player1' ? 'Player 1' : 'Player 2'} Name`;
+    text(labelText, WIDTH / 2, HEIGHT / 2 - 80);
+    textSize(20);
+    textStyle(NORMAL);
+    text("Tap to enter your name (max 20 characters)", WIDTH / 2, HEIGHT / 2 - 40);
+    const boxWidth = 360;
+    const boxHeight = 50;
+    stroke(26, 32, 44);
+    strokeWeight(2);
+    noFill();
+    rect(WIDTH / 2 - boxWidth / 2, HEIGHT / 2 - 10, boxWidth, boxHeight, 8);
+    fill(26, 32, 44);
+    noStroke();
+    textSize(26);
+    let inputText = this.currentInput.substring(0, 20);
+    let textWidthValue = textWidth(inputText);
+    if (textWidthValue > boxWidth - 20) {
+        let maxLength = floor((boxWidth - 20) / textWidth('a'));
+        inputText = this.currentInput.substring(0, maxLength - 3) + '...';
+    }
+    text(inputText, WIDTH / 2, HEIGHT / 2 + 8);
+};
+
+// Modify drawInvitePlay to adjust input visuals for mobile
+Game.prototype.drawInvitePlay = function() {
+    background(247, 250, 252);
+    fill(26, 32, 44);
+    textSize(50);
+    textStyle(BOLD);
+    textAlign(CENTER);
+    text("Invite Play", WIDTH / 2, 80);
+    textSize(22);
+    textStyle(NORMAL);
+    text("Play with a friend online", WIDTH / 2, 120);
+    if (this.invitePlayState === CREATE_ROOM || this.invitePlayState === JOIN_ROOM) {
+        let options = ["Create Room", "Join Room"];
+        for (let i = 0; i < options.length; i++) {
+            fill(i === this.selectedMenuItem ? CORAL : [26, 32, 44]);
+            textSize(30);
+            textStyle(i === this.selectedMenuItem ? BOLD : NORMAL);
+            text(options[i], WIDTH / 2, 220 + i * 60);
+        }
+        if (this.invitePlayState === JOIN_ROOM) {
+            textSize(20);
+            fill(26, 32, 44);
+            text("Tap to enter Room Code:", WIDTH / 2, 300);
+            const boxWidth = 200, boxHeight = 40;
+            stroke(26, 32, 44);
+            strokeWeight(2);
+            noFill();
+            rect(WIDTH / 2 - boxWidth / 2, 320, boxWidth, boxHeight, 8);
+            fill(26, 32, 44);
+            noStroke();
+            textSize(24);
+            let displayCode = this.currentInput || "";
+            text(displayCode.toUpperCase(), WIDTH / 2, 330);
+        }
+    } else if (this.invitePlayState === WAITING) {
+        textSize(30);
+        textStyle(NORMAL);
+        text("Room Code: " + (this.roomCode || "Generating..."), WIDTH / 2, 220);
+        if (this.roomCode) {
+            let link = `${window.location.origin}?room=${this.roomCode}`;
+            textSize(18);
+            text("Share this link:", WIDTH / 2, 260);
+            textSize(16);
+            text(link, WIDTH / 2, 290);
+            fill(this.copyButtonHover ? CORAL : [26, 32, 44]);
+            textSize(20);
+            text("Copy Link", WIDTH / 2, 330);
+            let textWidthValue = textWidth("Copy Link");
+            let textHeight = 20;
+            let x = WIDTH / 2 - textWidthValue / 2;
+            let y = 330 - textHeight / 2;
+            if (mouseX >= x && mouseX <= x + textWidthValue && mouseY >= y && mouseY <= y + textHeight) {
+                this.copyButtonHover = true;
+                if (mouseIsPressed) {
+                    navigator.clipboard.writeText(link).then(() => {
+                        this.setMessage("Link copied!", 60);
+                    });
+                }
+            } else {
+                this.copyButtonHover = false;
+            }
+        }
+        textSize(22);
+        fill(26, 32, 44);
+        text("Waiting for opponent...", WIDTH / 2, 380);
+    } else if (this.invitePlayState === PLAYING_ONLINE) {
+        this.drawBoard();
+        textSize(22);
+        text("Playing Online", WIDTH / 2, HEIGHT - 50);
+    }
+    textSize(18);
+    fill(113, 128, 150);
+    text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
+};
