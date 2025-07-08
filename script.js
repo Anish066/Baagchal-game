@@ -2123,6 +2123,7 @@ checkWinConditions() {
 }
 
 let game;
+let inputField1, inputField2, inviteLinkInput;
 
 function preload() {
     tigerImage = loadImage('tiger.png');
@@ -2157,7 +2158,38 @@ function setup() {
             }
         });
     }
+    // Create input fields for local multiplayer player names
+  inputField1 = createInput('Player 1');
+  inputField1.position(200, 300);
+  inputField1.size(200, 30);
+  inputField1.hide();
+  
+  inputField2 = createInput('Player 2');
+  inputField2.position(200, 350);
+  inputField2.size(200, 30);
+  inputField2.hide();
+  
+  // Create input field for online multiplayer invite link
+  inviteLinkInput = createInput('');
+  inviteLinkInput.position(200, 400);
+  inviteLinkInput.size(200, 30);
+  inviteLinkInput.hide();
+  
+  // Enable touch events for mobile compatibility
+  inputField1.elt.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    inputField1.elt.focus();
+  });
+  inputField2.elt.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    inputField2.elt.focus();
+  });
+  inviteLinkInput.elt.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    inviteLinkInput.elt.focus();
+  });
 }
+
 
 // Global functions
 function draw() {
@@ -2251,6 +2283,7 @@ function draw() {
         const moveHistoryPanel = document.getElementById('move-history-panel');
         if (moveHistoryPanel) moveHistoryPanel.style.display = 'none';
     }
+    game.draw();
 }
 
 // Global input handling functions
@@ -2547,6 +2580,9 @@ function mousePressed() {
                     game.currentInput = "";
                 }
             }
+            if (!isMouseOverInput()) {
+    game.handleMousePress(mouseX, mouseY);
+  }
         }
     }
 }
@@ -3026,4 +3062,90 @@ Game.prototype.drawInvitePlay = function() {
     textSize(18);
     fill(113, 128, 150);
     text("Press M to return to menu, Q to quit", WIDTH / 2, 430);
-};
+
+    if (keyCode === ENTER) {
+    if (game.state === 'localNameInput') {
+      game.player1Name = inputField1.value();
+      game.player2Name = inputField2.value();
+      game.startLocalMultiplayer();
+    } else if (game.state === 'onlineInvite') {
+      game.joinOnlineGame(inviteLinkInput.value());
+    }
+  }
+}
+
+// Helper function to check if mouse/touch is over input fields
+function isMouseOverInput() {
+  let overInput1 = mouseX >= inputField1.x && mouseX <= inputField1.x + inputField1.width &&
+                   mouseY >= inputField1.y && mouseY <= inputField1.y + inputField1.height;
+  let overInput2 = mouseX >= inputField2.x && mouseX <= inputField2.x + inputField2.width &&
+                   mouseY >= inputField2.y && mouseY <= inputField2.y + inputField2.height;
+  let overInviteInput = mouseX >= inviteLinkInput.x && mouseX <= inviteLinkInput.x + inviteLinkInput.width &&
+                       mouseY >= inviteLinkInput.y && mouseY <= inviteLinkInput.y + inviteLinkInput.height;
+  return overInput1 || overInput2 || overInviteInput;
+}
+
+// Assume Game class has methods like draw, handleMousePress, startLocalMultiplayer, joinOnlineGame
+class Game {
+  constructor() {
+    this.state = 'menu';
+    this.player1Name = '';
+    this.player2Name = '';
+  }
+  
+  draw() {
+    background(255);
+    if (this.state === 'localNameInput') {
+      inputField1.show();
+      inputField2.show();
+      textAlign(CENTER);
+      textSize(20);
+      text('Enter Player Names', width / 2, 250);
+    } else if (this.state === 'onlineInvite') {
+      inviteLinkInput.show();
+      textAlign(CENTER);
+      textSize(20);
+      text('Enter Invite Link', width / 2, 350);
+    } else {
+      inputField1.hide();
+      inputField2.hide();
+      inviteLinkInput.hide();
+    }
+    // Additional game drawing logic here
+  }
+  
+  handleMousePress(x, y) {
+    // Game logic for handling mouse/touch press
+  }
+  
+  startLocalMultiplayer() {
+    this.state = 'playing';
+    // Initialize local multiplayer game
+  }
+  
+  joinOnlineGame(link) {
+    this.state = 'playing';
+    // Join online game using link
+  }
+}
+;
+
+function mousePressed() {
+  // Ensure canvas doesn't interfere with input fields
+  if (!isMouseOverInput()) {
+    game.handleMousePress(mouseX, mouseY);
+  }
+}
+
+function touchStarted() {
+  // Handle touch events for mobile
+  if (!isMouseOverInput()) {
+    game.handleMousePress(mouseX, mouseY);
+  }
+  return false; // Prevent default touch behavior
+}
+
+function touchEnded() {
+  // Ensure touch release doesn't trigger unwanted actions
+  return false;
+}
